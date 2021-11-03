@@ -187,6 +187,5 @@ func (cfg *DiscoveryConfiguration) UpdateOpenNMS(onmsHomePath string) error {
 	}
 	log := new(Log)
 	log.Add(event)
-	log.Send("127.0.0.1", 5817)
-	return nil
+	return log.Send("127.0.0.1", 5817)
 }
