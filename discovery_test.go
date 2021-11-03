@@ -3,6 +3,9 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
+	"io/ioutil"
+	"net"
+	"os"
 	"testing"
 )
 
@@ -140,5 +143,46 @@ func TestAddExcludeRange(t *testing.T) {
 	def.AddExcludeRange("192.168.0.10", "192.168.0.20")
 	if len(def.ExcludeRanges) != 1 {
 		t.Errorf("the definition should 1 exclude-range")
+	}
+}
+
+func TestUpateOpenNMS(t *testing.T) {
+	dir, err := ioutil.TempDir(os.TempDir(), "_discovery")
+	if err != nil {
+		t.Errorf("cannot create temp directory: %v", err)
+	}
+	os.Mkdir(dir+"/etc", 0755)
+	defer os.RemoveAll(dir)
+
+	if err := os.WriteFile(dir+"/etc/discovery-configuration.xml", []byte{}, 0644); err != nil {
+		t.Errorf("cannot create empty discovery configuration")
+	}
+
+	go func() {
+		if err := baseConfig.UpdateOpenNMS(dir, 50817); err != nil {
+			t.Errorf("cannot send event to OpenNMS: %v", err)
+		}
+	}()
+
+	ln, err := net.Listen("tcp", "127.0.0.1:50817")
+	if err != nil {
+		t.Errorf("cannot create TCP server: %v", err)
+	}
+	defer ln.Close()
+
+	conn, err := ln.Accept()
+	if err != nil {
+		t.Errorf("cannot accept connections: %v", err)
+	}
+	defer conn.Close()
+
+	buf, err := ioutil.ReadAll(conn)
+	if err != nil {
+		t.Errorf("cannot read content: %v", err)
+	}
+	received := new(Log)
+	xml.Unmarshal(buf, received)
+	if received.Events[0].UEI != "uei.opennms.org/internal/reloadDaemonConfig" {
+		t.Errorf("incorrect message received: %s", string(buf))
 	}
 }

@@ -68,6 +68,7 @@ func getScanner(fileName string) *bufio.Scanner {
 func main() {
 	def := &baseConfig.Definitions[0] // Keep a reference to the main definition
 
+	var onmsPort int
 	var onmsHome, includeCIDR, excludeCIDR, includeList, excludeList, includeDNS, includeNNMiHex string
 	flag.StringVar(&includeCIDR, "inc-cidr", "", "Path to a file with a list of CIDRs to include in the configuration")
 	flag.StringVar(&excludeCIDR, "exc-cidr", "", "Path to a file with a list of CIDRs to exclude in the configuration")
@@ -76,6 +77,7 @@ func main() {
 	flag.StringVar(&includeDNS, "inc-dns", "", "Path to a file with a list of IP addresses to include in the configuration; e.x. ipv4addr=10.0.0.1")
 	flag.StringVar(&includeNNMiHex, "inc-hexnnmi", "", "Path to a file with a list of IP addresses in Hex format from NNMi")
 	flag.StringVar(&onmsHome, "onms-home", "/opt/opennms", "Home path to OpenNMS")
+	flag.IntVar(&onmsPort, "onms-port", 5817, "The TCP Port to send events to OpenNMS")
 	flag.Parse()
 
 	if includeCIDR != "" {
@@ -143,7 +145,7 @@ func main() {
 	data, _ := xml.MarshalIndent(baseConfig, "", "   ")
 	log.Printf("generated configuration: %s", string(data))
 	log.Printf("saving discovery configuration and notifying OpenNMS")
-	if err := baseConfig.UpdateOpenNMS(onmsHome); err != nil {
+	if err := baseConfig.UpdateOpenNMS(onmsHome, onmsPort); err != nil {
 		log.Fatal(err)
 	}
 }

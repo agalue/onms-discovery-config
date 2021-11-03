@@ -161,7 +161,7 @@ func (cfg *DiscoveryConfiguration) AddDefinition(d Definition) {
 	cfg.Definitions = append(cfg.Definitions, d)
 }
 
-func (cfg *DiscoveryConfiguration) UpdateOpenNMS(onmsHomePath string) error {
+func (cfg *DiscoveryConfiguration) UpdateOpenNMS(onmsHomePath string, onmsPort int) error {
 	dest := onmsHomePath + "/etc/discovery-configuration.xml"
 	if _, err := os.Stat(dest); errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("discovery configuration file not found at %s", dest)
@@ -172,7 +172,7 @@ func (cfg *DiscoveryConfiguration) UpdateOpenNMS(onmsHomePath string) error {
 	}
 	hostname, _ := os.Hostname()
 	event := Event{
-		UEI:    "uei.opennms.org/intertal/reloadDaemonConfig",
+		UEI:    "uei.opennms.org/internal/reloadDaemonConfig",
 		Source: "DiscoverConfigGenerator",
 		Time:   time.Now().Format(time.RFC3339),
 		Host:   hostname,
@@ -189,5 +189,5 @@ func (cfg *DiscoveryConfiguration) UpdateOpenNMS(onmsHomePath string) error {
 	}
 	log := new(Log)
 	log.Add(event)
-	return log.Send("127.0.0.1", 5817)
+	return log.Send("127.0.0.1", onmsPort)
 }
