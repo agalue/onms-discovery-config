@@ -64,16 +64,16 @@ func TestParseDiscoveryConfiguration(t *testing.T) {
 		t.Errorf("the SNMP detector has a wrong parameter")
 	}
 	if len(def.Specifics) != 1 {
-		t.Errorf("the detector should have 1 specific")
+		t.Errorf("the definition should have 1 specific")
 	}
 	if len(def.IncludeRanges) != 1 {
-		t.Errorf("the detector should have 1 include-range")
+		t.Errorf("the definition should have 1 include-range")
 	}
 	if len(def.ExcludeRanges) != 1 {
-		t.Errorf("the detector should have 1 exclude-range")
+		t.Errorf("the definition should have 1 exclude-range")
 	}
 	if len(def.IncludeURLs) != 1 {
-		t.Errorf("the detector should have 1 include-url")
+		t.Errorf("the definition should have 1 include-url")
 	}
 }
 
@@ -103,5 +103,42 @@ func TestExcludeContains(t *testing.T) {
 	}
 	if def.ExcludeContains("172.16.1.1") == true {
 		t.Errorf("address 172.16.1.1 should not be in any of the excluded ranges")
+	}
+}
+
+func TestAddSpecific(t *testing.T) {
+	def := new(Definition)
+	def.AddSpecific("192.168.0.1")
+	def.AddSpecific("192.168.0.2")
+	if len(def.Specifics) != 2 {
+		t.Errorf("the definition should have 2 specific")
+	}
+	def.AddSpecific("192.400.0.1") // Wrong IP
+	if len(def.Specifics) != 2 {
+		t.Errorf("the definition should have 2 specific")
+	}
+}
+
+func TestAddIncludeURL(t *testing.T) {
+	def := new(Definition)
+	def.AddIncludeURL("file:/tmp/ip-list.txt")
+	if len(def.IncludeURLs) != 1 {
+		t.Errorf("the definition should 1 include-url")
+	}
+}
+
+func TestAddIncludeRange(t *testing.T) {
+	def := new(Definition)
+	def.AddIncludeRange("192.168.0.10", "192.168.0.20")
+	if len(def.IncludeRanges) != 1 {
+		t.Errorf("the definition should 1 include-range")
+	}
+}
+
+func TestAddExcludeRange(t *testing.T) {
+	def := new(Definition)
+	def.AddExcludeRange("192.168.0.10", "192.168.0.20")
+	if len(def.ExcludeRanges) != 1 {
+		t.Errorf("the definition should 1 exclude-range")
 	}
 }

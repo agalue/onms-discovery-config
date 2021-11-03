@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
+	"io/ioutil"
+	"net"
 	"testing"
 )
 
@@ -57,5 +59,37 @@ func TestAddEvent(t *testing.T) {
 	log.Add(Event{UEI: "uei.opennms.org/test2"})
 	if len(log.Events) != 2 {
 		t.Errorf("the log should have two events")
+	}
+}
+
+func TestSendEvent(t *testing.T) {
+	go func() {
+		log := new(Log)
+		log.Add(Event{UEI: "uei.opennms.org/test"})
+		if err := log.Send("127.0.0.1", 50817); err != nil {
+			t.Errorf("cannot send event: %v", err)
+		}
+	}()
+
+	ln, err := net.Listen("tcp", "127.0.0.1:50817")
+	if err != nil {
+		t.Errorf("cannot create TCP server: %v", err)
+	}
+	defer ln.Close()
+
+	conn, err := ln.Accept()
+	if err != nil {
+		t.Errorf("cannot accept connections: %v", err)
+	}
+	defer conn.Close()
+
+	buf, err := ioutil.ReadAll(conn)
+	if err != nil {
+		t.Errorf("cannot read content: %v", err)
+	}
+	received := new(Log)
+	xml.Unmarshal(buf, received)
+	if received.Events[0].UEI != "uei.opennms.org/test" {
+		t.Errorf("incorrect message received: %s", string(buf))
 	}
 }
