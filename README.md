@@ -21,6 +21,12 @@ If you have Go 1.17 installed on your system:
 go build .
 ```
 
+If you're not running Linux and you want to generate a Linux binary:
+
+```bash
+GOOS=linux GOARCH=amd64 go build .
+```
+
 ## Usage
 
 If you have the compiled binary:
