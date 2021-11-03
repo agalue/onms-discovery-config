@@ -180,7 +180,7 @@ func (cfg *DiscoveryConfiguration) UpdateOpenNMS(onmsHomePath string) error {
 				Value: ParmValue{
 					Type:     "string",
 					Encoding: "text",
-					Content:  "Discoverd",
+					Content:  "Discovery",
 				},
 			},
 		},
