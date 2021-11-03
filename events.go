@@ -21,7 +21,7 @@ type Parm struct {
 
 type Event struct {
 	XMLName     xml.Name `xml:"event"`
-	UEI         string   `xml:"parmName"`
+	UEI         string   `xml:"uei"`
 	Source      string   `xml:"source,omitempty"`
 	NodeID      int      `xml:"nodeid,omitempty"`
 	Time        string   `xml:"time,omitempty"`

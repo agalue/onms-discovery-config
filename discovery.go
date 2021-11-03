@@ -120,13 +120,15 @@ func (def *Definition) ExcludeCIDR(cidr string) {
 }
 
 func (def *Definition) getRange(cidr string) (net.IP, net.IP, error) {
-	ipBegin, ipv4Net, err := net.ParseCIDR(cidr)
+	_, ipv4Net, err := net.ParseCIDR(cidr)
 	if err != nil {
 		return nil, nil, err
 	}
 	mask := binary.BigEndian.Uint32(ipv4Net.Mask)
 	start := binary.BigEndian.Uint32(ipv4Net.IP)
 	finish := (start & mask) | (mask ^ 0xffffffff)
+	ipBegin := make(net.IP, 4)
+	binary.BigEndian.PutUint32(ipBegin, start+1)
 	ipEnd := make(net.IP, 4)
 	binary.BigEndian.PutUint32(ipEnd, finish-1)
 	return ipBegin, ipEnd, nil
