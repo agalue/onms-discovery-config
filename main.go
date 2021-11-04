@@ -19,7 +19,7 @@ var baseConfig = &DiscoveryConfiguration{
 	RestartSleepTime: 86400000,
 	Retries:          1,
 	Timeout:          2000,
-	PacketsPerSecond: 1,
+	PacketsPerSecond: 10, // Rate limit how many ICMP requests are going out when pinging (large) ranges
 	Definitions: []Definition{
 		{
 			Detectors: []Detector{
@@ -42,21 +42,26 @@ var baseConfig = &DiscoveryConfiguration{
 	},
 }
 
+// Warning: ensure CIDRs and black-lists are loaded and processed before using this method
 func addSpecific(def *Definition, ip string) {
 	if net.ParseIP(ip) == nil { // Not an IP Address
-		log.Printf("ignore: %s is not a valid IP address", ip)
+		log.Printf("ignore: '%s' is not a valid IP address", ip)
 		return
 	}
 	if _, ok := addressBlackList[ip]; ok {
 		log.Printf("ignore: IP %s is blacklisted", ip)
 		return
 	}
-	if def.ExcludeContains(ip) {
+	if def.ExcludeRangesContain(ip) {
 		log.Printf("ignore: IP %s is part of exclude ranges", ip)
 		return
 	}
+	if def.IncludeRangesContain(ip) {
+		log.Printf("ignore: IP %s is part of include ranges", ip)
+		return
+	}
 	if _, ok := addressWhiteList[ip]; !ok {
-		log.Printf("adding IP %s", ip)
+		log.Printf("adding sepcific IP %s", ip)
 		def.AddSpecific(ip)
 		addressWhiteList[ip] = true
 	} else {
@@ -91,7 +96,7 @@ func main() {
 	flag.IntVar(&baseConfig.RestartSleepTime, "disc-restart-sleep-time", baseConfig.RestartSleepTime, "Discoverd Restart Sleep/Pause Time between discovery passes (in milliseconds)")
 	flag.IntVar(&baseConfig.Retries, "disc-retries", baseConfig.Retries, "Discoverd Ping Retries")
 	flag.IntVar(&baseConfig.Timeout, "disc-timeout", baseConfig.Timeout, "Discoverd Ping Timeout")
-	flag.IntVar(&baseConfig.PacketsPerSecond, "disc-packets-per-second", baseConfig.PacketsPerSecond, "Discoverd Packets Per Second")
+	flag.IntVar(&baseConfig.PacketsPerSecond, "disc-packets-per-second", baseConfig.PacketsPerSecond, "Discoverd Packets Per Second (rate limit how many ICMP requests are going out)")
 
 	flag.Parse()
 

@@ -139,7 +139,20 @@ func (def *Definition) getRange(cidr string) (net.IP, net.IP, error) {
 	return ipBegin, ipEnd, nil
 }
 
-func (def *Definition) ExcludeContains(ipaddr string) bool {
+func (def *Definition) IncludeRangesContain(ipaddr string) bool {
+	ip := net.ParseIP(ipaddr)
+	if ip == nil {
+		return false
+	}
+	for _, r := range def.IncludeRanges {
+		if bytes.Compare(ip, net.ParseIP(r.Begin)) >= 0 && bytes.Compare(ip, net.ParseIP(r.End)) <= 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (def *Definition) ExcludeRangesContain(ipaddr string) bool {
 	ip := net.ParseIP(ipaddr)
 	if ip == nil {
 		return false

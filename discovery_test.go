@@ -94,18 +94,33 @@ func TestIncludeCIDR(t *testing.T) {
 	}
 }
 
-func TestExcludeContains(t *testing.T) {
+func TestExcludeRangesContain(t *testing.T) {
 	def := new(Definition)
 	def.ExcludeCIDR("192.168.0.0/24")
 	def.ExcludeCIDR("192.168.1.0/24")
-	if def.ExcludeContains("192.168.0.1") == false {
+	if def.ExcludeRangesContain("192.168.0.1") == false {
 		t.Errorf("address 192.168.0.1 should be in one of the excluded ranges")
 	}
-	if def.ExcludeContains("192.168.1.10") == false {
+	if def.ExcludeRangesContain("192.168.1.10") == false {
 		t.Errorf("address 192.168.1.10 should be in one of the excluded ranges")
 	}
-	if def.ExcludeContains("172.16.1.1") == true {
+	if def.ExcludeRangesContain("172.16.1.1") == true {
 		t.Errorf("address 172.16.1.1 should not be in any of the excluded ranges")
+	}
+}
+
+func TestIncludeRangesContain(t *testing.T) {
+	def := new(Definition)
+	def.IncludeCIDR("192.168.0.0/24")
+	def.IncludeCIDR("192.168.1.0/24")
+	if def.IncludeRangesContain("192.168.0.1") == false {
+		t.Errorf("address 192.168.0.1 should be in one of the included ranges")
+	}
+	if def.IncludeRangesContain("192.168.1.10") == false {
+		t.Errorf("address 192.168.1.10 should be in one of the included ranges")
+	}
+	if def.IncludeRangesContain("172.16.1.1") == true {
+		t.Errorf("address 172.16.1.1 should not be in any of the included ranges")
 	}
 }
 

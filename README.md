@@ -1,6 +1,6 @@
 # onms-discovery-config
 
-This is a tool to generate Discoverd's configuration for OpenNMS for a specific use case.
+This is a tool to generate Discoverd's configuration for OpenNMS for a specific use case. Unfortunately, we cannot change some vital elements from the Discovery configuration via the ReST API. For that reason, the tool should run within the OpenNMS server, and when this happens, it will replace the `discovery-configuration.xml` file and send an event via TCP 5817 to request a reload. If not, it will display the generated config, but it won't update OpenNMS.
 
 The use case involves having external files with the following information:
 
@@ -54,7 +54,5 @@ go run . \
 ```
 
 Passing `-h` or `--help` will show a short description of how to use the program.
-
-Only when it is executed from the OpenNMS server, it will override the configuration at `$OPENNMS_HOME/etc/discovery-configuration.xml` and will use the listener on port TCP 5817 to send an event to OpenNMS to reload the configuration (similar to how `send-event.pl` works).
 
 Enjoy!
