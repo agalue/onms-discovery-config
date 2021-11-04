@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -147,6 +148,26 @@ func (def *Definition) ExcludeContains(ipaddr string) bool {
 	return false
 }
 
+func (def *Definition) Sort() {
+	sort.SliceStable(def.Specifics, func(i, j int) bool {
+		a := binary.BigEndian.Uint32(net.ParseIP(def.Specifics[i].Content).To4())
+		b := binary.BigEndian.Uint32(net.ParseIP(def.Specifics[j].Content).To4())
+		return a < b
+	})
+
+	sort.SliceStable(def.IncludeRanges, func(i, j int) bool {
+		a := binary.BigEndian.Uint32(net.ParseIP(def.IncludeRanges[i].Begin).To4())
+		b := binary.BigEndian.Uint32(net.ParseIP(def.IncludeRanges[j].End).To4())
+		return a < b
+	})
+
+	sort.SliceStable(def.ExcludeRanges, func(i, j int) bool {
+		a := binary.BigEndian.Uint32(net.ParseIP(def.ExcludeRanges[i].Begin).To4())
+		b := binary.BigEndian.Uint32(net.ParseIP(def.ExcludeRanges[j].End).To4())
+		return a < b
+	})
+}
+
 type DiscoveryConfiguration struct {
 	XMLName          xml.Name     `xml:"discovery-configuration"`
 	PacketsPerSecond int          `xml:"packets-per-second,attr,omitempty"`
@@ -159,6 +180,13 @@ type DiscoveryConfiguration struct {
 
 func (cfg *DiscoveryConfiguration) AddDefinition(d Definition) {
 	cfg.Definitions = append(cfg.Definitions, d)
+}
+
+func (cfg *DiscoveryConfiguration) Sort() {
+	for i := range cfg.Definitions {
+		d := &cfg.Definitions[i]
+		d.Sort()
+	}
 }
 
 func (cfg *DiscoveryConfiguration) UpdateOpenNMS(onmsHomePath string, onmsPort int) error {

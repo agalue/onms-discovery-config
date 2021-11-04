@@ -11,7 +11,8 @@ import (
 	"regexp"
 )
 
-var addressBlackList = make(map[string]bool)
+var addressWhiteList = make(map[string]bool) // Temporary map to avoid duplicates
+var addressBlackList = make(map[string]bool) // Temporary map to facilitate excluding addresses
 
 var baseConfig = &DiscoveryConfiguration{
 	InitialSleepTime: 30000,
@@ -53,8 +54,11 @@ func addSpecific(def *Definition, ip string) {
 		log.Printf("ignore: IP %s is part of exclude ranges", ip)
 		return
 	}
-	log.Printf("adding IP %s", ip)
-	def.AddSpecific(ip)
+	if _, ok := addressWhiteList[ip]; !ok {
+		log.Printf("adding IP %s", ip)
+		def.AddSpecific(ip)
+		addressWhiteList[ip] = true
+	}
 }
 
 func getScanner(fileName string) *bufio.Scanner {
@@ -142,8 +146,9 @@ func main() {
 		cmd.Wait()
 	}
 
+	baseConfig.Sort()
 	data, _ := xml.MarshalIndent(baseConfig, "", "   ")
-	log.Printf("generated configuration: %s", string(data))
+	log.Printf("generated configuration:\n%s", string(data))
 	log.Printf("saving discovery configuration and notifying OpenNMS")
 	if err := baseConfig.UpdateOpenNMS(onmsHome, onmsPort); err != nil {
 		log.Fatal(err)
