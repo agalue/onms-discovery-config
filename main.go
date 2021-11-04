@@ -77,6 +77,7 @@ func main() {
 
 	var onmsPort int
 	var onmsHome, includeCIDR, excludeCIDR, includeList, excludeList, includeDNS, includeNNMiHex string
+
 	flag.StringVar(&includeCIDR, "inc-cidr", "", "Path to a file with a list of CIDRs to include in the configuration")
 	flag.StringVar(&excludeCIDR, "exc-cidr", "", "Path to a file with a list of CIDRs to exclude in the configuration")
 	flag.StringVar(&includeList, "inc-list", "", "Path to a file with a list of IP addresses to include in the configuration (excluding 'exc-list')")
@@ -85,6 +86,13 @@ func main() {
 	flag.StringVar(&includeNNMiHex, "inc-hexnnmi", "", "Path to a file with a list of IP addresses in Hex format from NNMi")
 	flag.StringVar(&onmsHome, "onms-home", "/opt/opennms", "Home path to OpenNMS")
 	flag.IntVar(&onmsPort, "onms-port", 5817, "The TCP Port to send events to OpenNMS")
+
+	flag.IntVar(&baseConfig.InitialSleepTime, "disc-initial-sleep-time", baseConfig.InitialSleepTime, "Discoverd Initial Sleep/Pause Time after discovery starts up (in milliseconds)")
+	flag.IntVar(&baseConfig.RestartSleepTime, "disc-restart-sleep-time", baseConfig.RestartSleepTime, "Discoverd Restart Sleep/Pause Time between discovery passes (in milliseconds)")
+	flag.IntVar(&baseConfig.Retries, "disc-retries", baseConfig.Retries, "Discoverd Ping Retries")
+	flag.IntVar(&baseConfig.Timeout, "disc-timeout", baseConfig.Timeout, "Discoverd Ping Timeout")
+	flag.IntVar(&baseConfig.PacketsPerSecond, "disc-packets-per-second", baseConfig.PacketsPerSecond, "Discoverd Packets Per Second")
+
 	flag.Parse()
 
 	if includeCIDR != "" {

@@ -1,3 +1,6 @@
+// Representation and helper functions for an events log
+// https://github.com/OpenNMS/opennms/blob/master/opennms-base-assembly/src/main/filtered/bin/send-event.pl
+
 package main
 
 import (

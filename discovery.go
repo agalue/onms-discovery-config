@@ -1,3 +1,6 @@
+// Representation and helper functions for discovery-configuration.xml
+// https://github.com/OpenNMS/opennms/blob/master/opennms-config-model/src/main/resources/xsds/discovery-configuration.xsd
+
 package main
 
 import (
@@ -45,9 +48,10 @@ type IncludeRange struct {
 }
 
 type ExcludeRange struct {
-	XMLName xml.Name `xml:"exclude-range"`
-	Begin   string   `xml:"begin"`
-	End     string   `xml:"end"`
+	XMLName  xml.Name `xml:"exclude-range"`
+	Location string   `xml:"location,attr,omitempty"`
+	Begin    string   `xml:"begin"`
+	End      string   `xml:"end"`
 }
 
 type IncludeURL struct {
@@ -175,6 +179,7 @@ type DiscoveryConfiguration struct {
 	RestartSleepTime int          `xml:"restart-sleep-time,attr,omitempty"`
 	Retries          int          `xml:"retries,attr,omitempty"`
 	Timeout          int          `xml:"timeout,attr,omitempty"`
+	ChunkSize        int          `xml:"chunk-size,attr,omitempty"`
 	Definitions      []Definition `xml:"definition,omitempty"`
 }
 
