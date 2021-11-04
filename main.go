@@ -44,6 +44,7 @@ var baseConfig = &DiscoveryConfiguration{
 
 func addSpecific(def *Definition, ip string) {
 	if net.ParseIP(ip) == nil { // Not an IP Address
+		log.Printf("ignore: %s is not a valid IP address", ip)
 		return
 	}
 	if _, ok := addressBlackList[ip]; ok {
@@ -58,6 +59,8 @@ func addSpecific(def *Definition, ip string) {
 		log.Printf("adding IP %s", ip)
 		def.AddSpecific(ip)
 		addressWhiteList[ip] = true
+	} else {
+		log.Printf("ignore: IP %s already included", ip)
 	}
 }
 
@@ -106,8 +109,13 @@ func main() {
 		log.Printf("processing Exclude List %s", excludeList)
 		s := getScanner(excludeList)
 		for s.Scan() {
-			log.Printf("excluding IP %s", s.Text())
-			addressBlackList[s.Text()] = true
+			ip := s.Text()
+			if net.ParseIP(ip) == nil { // Not an IP Address
+				log.Printf("ignore: %s is not a valid IP address", ip)
+			} else {
+				log.Printf("excluding IP %s", s.Text())
+				addressBlackList[s.Text()] = true
+			}
 		}
 	}
 
