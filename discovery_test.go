@@ -12,7 +12,7 @@ import (
 func TestParseDiscoveryConfiguration(t *testing.T) {
 	// https://github.com/OpenNMS/opennms/blob/master/opennms-base-assembly/src/main/filtered/etc/examples/discovery-configuration.xml
 	referenceConfig := `
-	<discovery-configuration packets-per-second="1" initial-sleep-time="30000" restart-sleep-time="86400000" retries="1" timeout="2000">
+	<discovery-configuration xmlns="http://xmlns.opennms.org/xsd/config/discovery" packets-per-second="1" initial-sleep-time="30000" restart-sleep-time="86400000" retries="1" timeout="2000">
 		<definition location="MINION" foreign-source="ApexOffice">
 			<detectors>
 				<detector name="reverse-dns-lookup" class-name="org.opennms.netmgt.provision.detector.rdns.ReverseDNSLookupDetector"/>

@@ -186,7 +186,7 @@ func (def *Definition) Sort() {
 }
 
 type DiscoveryConfiguration struct {
-	XMLName          xml.Name     `xml:"discovery-configuration"`
+	XMLName          xml.Name     `xml:"http://xmlns.opennms.org/xsd/config/discovery discovery-configuration"`
 	PacketsPerSecond int          `xml:"packets-per-second,attr,omitempty"`
 	InitialSleepTime int          `xml:"initial-sleep-time,attr,omitempty"`
 	RestartSleepTime int          `xml:"restart-sleep-time,attr,omitempty"`
