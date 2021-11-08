@@ -13,7 +13,7 @@ The use case involves having external files with the following information:
 
 The logic to parse the NNMi addresses in Hex format was originally written in Perl. Due to the lack of documentation, I decided to use Perl only for those addresses, meaning Perl should be installed and accessible via `/usr/bin/perl` (there is no need for other libraries).
 
-## Compilation
+## Compilation (Optional)
 
 If you have Go 1.17 installed on your system:
 
@@ -26,6 +26,8 @@ If you're not running Linux and you want to generate a Linux binary:
 ```bash
 GOOS=linux GOARCH=amd64 go build .
 ```
+
+> Please note that you don't have to compile the tool to use it. You can download the pre-compiled binary from the releases. There is no need to have Go installed on your system, and the binary contains everything it needs to run (zero dependencies required).
 
 ## Usage
 
@@ -52,6 +54,8 @@ go run . \
   -inc-dns /tmp/dns_a_hosts_records.txt \
   -inc-hexnnmi /tmp/nnmi_hex_ips
 ```
+
+You can pass `-dry-run`, and it will just display the generated XML in standard output without touching or modifying OpenNMS.
 
 Passing `-h` or `--help` will show a short description of how to use the program.
 
