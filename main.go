@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 )
 
 var addressWhiteList = make(map[string]bool) // Temporary map to avoid duplicates
@@ -78,8 +79,10 @@ func getScanner(fileName string) *bufio.Scanner {
 }
 
 func main() {
+	log.SetOutput(os.Stdout)
 	def := &baseConfig.Definitions[0] // Keep a reference to the main definition
 
+	var dryRun bool
 	var onmsPort int
 	var onmsHome, includeCIDR, excludeCIDR, includeList, excludeList, includeDNS, includeNNMiHex string
 
@@ -98,14 +101,17 @@ func main() {
 	flag.IntVar(&baseConfig.Timeout, "disc-timeout", baseConfig.Timeout, "Discoverd Ping Timeout")
 	flag.IntVar(&baseConfig.PacketsPerSecond, "disc-packets-per-second", baseConfig.PacketsPerSecond, "Discoverd Packets Per Second (rate limit how many ICMP requests are going out)")
 
+	flag.BoolVar(&dryRun, "dry-run", false, "Whether or not to update OpenNMS configuration")
+
 	flag.Parse()
 
 	if includeCIDR != "" {
 		log.Printf("processing Include CIDR %s", includeCIDR)
 		s := getScanner(includeCIDR)
 		for s.Scan() {
-			log.Printf("including CIDR %s", s.Text())
-			def.IncludeCIDR(s.Text())
+			cidr := strings.TrimSpace(s.Text())
+			log.Printf("including CIDR %s", cidr)
+			def.IncludeCIDR(cidr)
 		}
 	}
 
@@ -113,8 +119,9 @@ func main() {
 		log.Printf("processing Exclude CIDR %s", excludeCIDR)
 		s := getScanner(excludeCIDR)
 		for s.Scan() {
-			log.Printf("excluding CIDR %s", s.Text())
-			def.ExcludeCIDR(s.Text())
+			cidr := strings.TrimSpace(s.Text())
+			log.Printf("excluding CIDR %s", cidr)
+			def.ExcludeCIDR(cidr)
 		}
 	}
 
@@ -122,7 +129,7 @@ func main() {
 		log.Printf("processing Exclude List %s", excludeList)
 		s := getScanner(excludeList)
 		for s.Scan() {
-			ip := s.Text()
+			ip := strings.TrimSpace(s.Text())
 			if net.ParseIP(ip) == nil { // Not an IP Address
 				log.Printf("ignore: %s is not a valid IP address", ip)
 			} else {
@@ -136,7 +143,8 @@ func main() {
 		log.Printf("processing Include List %s", includeList)
 		s := getScanner(includeList)
 		for s.Scan() {
-			addSpecific(def, s.Text())
+			ip := strings.TrimSpace(s.Text())
+			addSpecific(def, ip)
 		}
 	}
 
@@ -145,7 +153,8 @@ func main() {
 		re := regexp.MustCompile(`ipv4addr: (\d+\.\d+\.\d+\.\d+)`)
 		s := getScanner(includeDNS)
 		for s.Scan() {
-			if match := re.FindStringSubmatch(s.Text()); len(match) == 2 {
+			line := strings.TrimSpace(s.Text())
+			if match := re.FindStringSubmatch(line); len(match) == 2 {
 				addSpecific(def, match[1])
 			}
 		}
@@ -162,7 +171,8 @@ func main() {
 		}
 		s := bufio.NewScanner(r)
 		for s.Scan() {
-			addSpecific(def, s.Text())
+			ip := strings.TrimSpace(s.Text())
+			addSpecific(def, ip)
 		}
 		cmd.Wait()
 	}
@@ -170,8 +180,10 @@ func main() {
 	baseConfig.Sort()
 	data, _ := xml.MarshalIndent(baseConfig, "", "   ")
 	log.Printf("generated configuration:\n%s", string(data))
-	log.Printf("saving discovery configuration and notifying OpenNMS")
-	if err := baseConfig.UpdateOpenNMS(onmsHome, onmsPort); err != nil {
-		log.Fatal(err)
+	if !dryRun {
+		log.Printf("saving discovery configuration and notifying OpenNMS")
+		if err := baseConfig.UpdateOpenNMS(onmsHome, onmsPort); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
