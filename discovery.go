@@ -1,5 +1,7 @@
 // Representation and helper functions for discovery-configuration.xml
 // https://github.com/OpenNMS/opennms/blob/master/opennms-config-model/src/main/resources/xsds/discovery-configuration.xsd
+//
+// Warning: Tested only with IPv4 addresses (IPv6 not supported)
 
 package main
 
@@ -124,21 +126,6 @@ func (def *Definition) ExcludeCIDR(cidr string) {
 	}
 }
 
-func (def *Definition) getRange(cidr string) (net.IP, net.IP, error) {
-	_, ipv4Net, err := net.ParseCIDR(cidr)
-	if err != nil {
-		return nil, nil, err
-	}
-	mask := binary.BigEndian.Uint32(ipv4Net.Mask)
-	start := binary.BigEndian.Uint32(ipv4Net.IP)
-	finish := (start & mask) | (mask ^ 0xffffffff)
-	ipBegin := make(net.IP, 4)
-	binary.BigEndian.PutUint32(ipBegin, start+1)
-	ipEnd := make(net.IP, 4)
-	binary.BigEndian.PutUint32(ipEnd, finish-1)
-	return ipBegin, ipEnd, nil
-}
-
 func (def *Definition) IncludeRangesContain(ipaddr string) bool {
 	ip := net.ParseIP(ipaddr)
 	if ip == nil {
@@ -167,22 +154,85 @@ func (def *Definition) ExcludeRangesContain(ipaddr string) bool {
 
 func (def *Definition) Sort() {
 	sort.SliceStable(def.Specifics, func(i, j int) bool {
-		a := binary.BigEndian.Uint32(net.ParseIP(def.Specifics[i].Content).To4())
-		b := binary.BigEndian.Uint32(net.ParseIP(def.Specifics[j].Content).To4())
+		a := def.ipToInt(def.Specifics[i].Content)
+		b := def.ipToInt(def.Specifics[j].Content)
 		return a < b
 	})
 
 	sort.SliceStable(def.IncludeRanges, func(i, j int) bool {
-		a := binary.BigEndian.Uint32(net.ParseIP(def.IncludeRanges[i].Begin).To4())
-		b := binary.BigEndian.Uint32(net.ParseIP(def.IncludeRanges[j].End).To4())
+		a := def.ipToInt(def.IncludeRanges[i].Begin)
+		b := def.ipToInt(def.IncludeRanges[j].End)
 		return a < b
 	})
 
 	sort.SliceStable(def.ExcludeRanges, func(i, j int) bool {
-		a := binary.BigEndian.Uint32(net.ParseIP(def.ExcludeRanges[i].Begin).To4())
-		b := binary.BigEndian.Uint32(net.ParseIP(def.ExcludeRanges[j].End).To4())
+		a := def.ipToInt(def.ExcludeRanges[i].Begin)
+		b := def.ipToInt(def.ExcludeRanges[j].End)
 		return a < b
 	})
+}
+
+// GetTotalEstimatedAddresses offers an estimate about the potential total number of IP addresses to consider for discovery.
+// It ignores the external files.
+func (def *Definition) GetTotalEstimatedAddresses() uint32 {
+	var total uint32 = 0
+	for _, r := range def.IncludeRanges {
+		a := def.ipToInt(r.Begin)
+		b := def.ipToInt(r.End)
+		for i := a; i <= b; i++ {
+			if !def.excludeRangesContain(i) {
+				total++
+			}
+		}
+	}
+	for _, ip := range def.Specifics {
+		i := def.ipToInt(ip.Content)
+		if !def.excludeRangesContain(i) {
+			total++
+		}
+	}
+	return total
+}
+
+func (def *Definition) String() string {
+	data, _ := xml.MarshalIndent(def, "", "   ")
+	return string(data)
+}
+
+func (def *Definition) getRange(cidr string) (net.IP, net.IP, error) {
+	_, ipv4Net, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return nil, nil, err
+	}
+	mask := binary.BigEndian.Uint32(ipv4Net.Mask)
+	start := binary.BigEndian.Uint32(ipv4Net.IP)
+	finish := (start & mask) | (mask ^ 0xffffffff)
+	return def.intToIp(start + 1), def.intToIp(finish - 1), nil
+}
+
+// Convert an IPv4 address to integer
+func (def *Definition) ipToInt(ipaddr string) uint32 {
+	ip := net.ParseIP(ipaddr)
+	if ip == nil {
+		return 0
+	}
+	return binary.BigEndian.Uint32(ip.To4())
+}
+
+// Convert an integer to IPv4 address
+func (def *Definition) intToIp(ipaddr uint32) net.IP {
+	ip := make(net.IP, 4)
+	binary.BigEndian.PutUint32(ip, ipaddr)
+	return ip
+}
+
+func (def *Definition) excludeRangesContain(ipaddr uint32) bool {
+	for _, r := range def.ExcludeRanges {
+		if ipaddr >= def.ipToInt(r.Begin) && ipaddr <= def.ipToInt(r.End) {
+			return true
+		}
+	}
+	return false
 }
 
 type DiscoveryConfiguration struct {
@@ -205,6 +255,14 @@ func (cfg *DiscoveryConfiguration) Sort() {
 		d := &cfg.Definitions[i]
 		d.Sort()
 	}
+}
+
+func (cfg *DiscoveryConfiguration) GetTotalEstimatedAddresses() uint32 {
+	var total uint32 = 0
+	for _, d := range cfg.Definitions {
+		total += d.GetTotalEstimatedAddresses()
+	}
+	return total
 }
 
 func (cfg *DiscoveryConfiguration) UpdateOpenNMS(onmsHomePath string, onmsPort int) error {
@@ -236,4 +294,9 @@ func (cfg *DiscoveryConfiguration) UpdateOpenNMS(onmsHomePath string, onmsPort i
 	log := new(Log)
 	log.Add(event)
 	return log.Send("127.0.0.1", onmsPort)
+}
+
+func (cfg *DiscoveryConfiguration) String() string {
+	data, _ := xml.MarshalIndent(cfg, "", "   ")
+	return string(data)
 }

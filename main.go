@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/xml"
 	"flag"
 	"log"
 	"net"
@@ -178,8 +177,8 @@ func main() {
 	}
 
 	baseConfig.Sort()
-	data, _ := xml.MarshalIndent(baseConfig, "", "   ")
-	log.Printf("generated configuration:\n%s", string(data))
+	log.Printf("generated configuration:\n%s", baseConfig.String())
+	log.Printf("the estimated number of IP addresses to check is about %d", baseConfig.GetTotalEstimatedAddresses())
 	if !dryRun {
 		log.Printf("saving discovery configuration and notifying OpenNMS")
 		if err := baseConfig.UpdateOpenNMS(onmsHome, onmsPort); err != nil {

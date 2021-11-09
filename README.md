@@ -59,4 +59,26 @@ You can pass `-dry-run`, and it will just display the generated XML in standard 
 
 Passing `-h` or `--help` will show a short description of how to use the program.
 
+You could enable `INFO` for `discovery` in `$OPENNMS_HOME/etc/log4j2.xml` to track progress. The following are some important messages:
+
+a) Discovery task started
+
+```
+2021-11-08 16:30:28,184 INFO  [Discovery] o.o.n.d.Discovery: Discovery triggered by timer.
+```
+
+b) Discovery task finished
+
+```
+2021-11-08 16:31:17,999 INFO  [ping-sweep-1] o.o.n.d.Discovery: Discovery completed succesfully.
+```
+
+c) Nodes added to the database (for reachable nodes that passed the detectors):
+
+```
+2021-11-08 16:30:54,853 INFO  [scanExecutor-7] o.o.n.m.e.AddEventVisitor: Sending nodeAdded Event for OnmsNode{id=1, location=Default, foreignSource=null, foreignId=null, labelSource=H, label=srv01.local, parent.id=null, createTime=Mon Nov 08 16:30:54 EST 2021, sysObjectId=null, sysName=null, sysDescription=null, sysLocation=null, sysContact=null, type=A, operatingSystem=null, lastIngressFlow=null, lastEgressFlow=null}
+```
+
+Note that `labelSource=H` (`H` stands for `Hostname`), means the node's label is the FQDN of the device resolved via DNS. For more details about the scan process, use `DEBUG` for the log level.
+
 Enjoy!

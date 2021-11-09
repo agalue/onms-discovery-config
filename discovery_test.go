@@ -109,6 +109,21 @@ func TestExcludeRangesContain(t *testing.T) {
 	}
 }
 
+func TestExcludeRangesContainInt(t *testing.T) {
+	def := new(Definition)
+	def.ExcludeCIDR("192.168.0.0/24")
+	def.ExcludeCIDR("192.168.1.0/24")
+	if def.excludeRangesContain(def.ipToInt("192.168.0.1")) == false {
+		t.Errorf("address 192.168.0.1 should be in one of the excluded ranges")
+	}
+	if def.excludeRangesContain(def.ipToInt("192.168.1.10")) == false {
+		t.Errorf("address 192.168.1.10 should be in one of the excluded ranges")
+	}
+	if def.excludeRangesContain(def.ipToInt("172.16.1.1")) == true {
+		t.Errorf("address 172.16.1.1 should not be in any of the excluded ranges")
+	}
+}
+
 func TestIncludeRangesContain(t *testing.T) {
 	def := new(Definition)
 	def.IncludeCIDR("192.168.0.0/24")
@@ -158,6 +173,39 @@ func TestAddExcludeRange(t *testing.T) {
 	def.AddExcludeRange("192.168.0.10", "192.168.0.20")
 	if len(def.ExcludeRanges) != 1 {
 		t.Errorf("the definition should 1 exclude-range")
+	}
+}
+
+func TestGetTotalEstimatedAddresses(t *testing.T) {
+	d := Definition{}
+	d.AddSpecific("192.168.0.1")
+	d.AddSpecific("192.168.0.2")
+	d.IncludeCIDR("172.20.0.0/16")
+	d.IncludeCIDR("10.10.0.0/16")
+	d.ExcludeCIDR("172.20.10.0/24")
+	d.ExcludeCIDR("192.169.0.0/24")
+	cfg := DiscoveryConfiguration{
+		Definitions: []Definition{d},
+	}
+	var expected uint32 = 130816 // 2 * ClassB - ClassA + 2 = 2 * 65533 - 253 + 2
+	total := cfg.GetTotalEstimatedAddresses()
+	if total != expected {
+		t.Errorf("the total estimated addresses was %d and it should be %d", total, expected)
+	}
+}
+
+func TestSort(t *testing.T) {
+	d := Definition{}
+	d.AddSpecific("192.168.0.10")
+	d.AddSpecific("192.168.0.2")
+	d.AddSpecific("172.16.20.2")
+	d.AddSpecific("172.16.16.2")
+	d.Sort()
+	if d.Specifics[0].Content != "172.16.16.2" {
+		t.Errorf("invalid sort for position 0: %s", d.Specifics[0].Content)
+	}
+	if d.Specifics[3].Content != "192.168.0.10" {
+		t.Errorf("invalid sort for position 3: %s", d.Specifics[3].Content)
 	}
 }
 
