@@ -13,6 +13,8 @@ The use case involves having external files with the following information:
 
 The logic to parse the NNMi addresses in Hex format was originally written in Perl. Due to the lack of documentation, I decided to use Perl only for those addresses, meaning Perl should be installed and accessible via `/usr/bin/perl` (there is no need for other libraries).
 
+> The solution works only with IPv4 addresses, as there is no immediate requirement to support IPv6.
+
 ## Compilation (Optional)
 
 If you have Go 1.17 installed on your system:
