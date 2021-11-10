@@ -40,6 +40,17 @@ type Specific struct {
 	ForeignSource string   `xml:"foreign-source,attr,omitempty"`
 }
 
+func (s *Specific) ToIPAddressRange() IPAddressRange {
+	return IPAddressRange{
+		Location:      s.Location,
+		Retries:       s.Retries,
+		Timeout:       s.Timeout,
+		ForeignSource: s.ForeignSource,
+		Begin:         net.ParseIP(s.Content),
+		End:           net.ParseIP(s.Content),
+	}
+}
+
 type IncludeRange struct {
 	XMLName       xml.Name `xml:"include-range"`
 	Location      string   `xml:"location,attr,omitempty"`
@@ -48,6 +59,17 @@ type IncludeRange struct {
 	ForeignSource string   `xml:"foreign-source,attr,omitempty"`
 	Begin         string   `xml:"begin"`
 	End           string   `xml:"end"`
+}
+
+func (r *IncludeRange) ToIPAddressRange() IPAddressRange {
+	return IPAddressRange{
+		Location:      r.Location,
+		Retries:       r.Retries,
+		Timeout:       r.Timeout,
+		ForeignSource: r.ForeignSource,
+		Begin:         net.ParseIP(r.Begin),
+		End:           net.ParseIP(r.End),
+	}
 }
 
 type ExcludeRange struct {
@@ -99,20 +121,24 @@ func (def *Definition) AddIncludeRange(begin, end string) {
 	if net.ParseIP(begin) == nil || net.ParseIP(end) == nil {
 		return
 	}
-	def.IncludeRanges = append(def.IncludeRanges, IncludeRange{
-		Begin: begin,
-		End:   end,
-	})
+	if def.ipToInt(end) > def.ipToInt(begin) {
+		def.IncludeRanges = append(def.IncludeRanges, IncludeRange{
+			Begin: begin,
+			End:   end,
+		})
+	}
 }
 
 func (def *Definition) AddExcludeRange(begin, end string) {
 	if net.ParseIP(begin) == nil || net.ParseIP(end) == nil {
 		return
 	}
-	def.ExcludeRanges = append(def.ExcludeRanges, ExcludeRange{
-		Begin: begin,
-		End:   end,
-	})
+	if def.ipToInt(end) > def.ipToInt(begin) {
+		def.ExcludeRanges = append(def.ExcludeRanges, ExcludeRange{
+			Begin: begin,
+			End:   end,
+		})
+	}
 }
 
 func (def *Definition) IncludeCIDR(cidr string) {
@@ -173,6 +199,39 @@ func (def *Definition) Sort() {
 	})
 }
 
+func (def *Definition) Merge() {
+	def.Sort()
+	rangeSet := new(IPAddressRangeSet)
+	for _, r := range def.IncludeRanges {
+		rangeSet.Add(r.ToIPAddressRange())
+	}
+	for _, s := range def.Specifics {
+		rangeSet.Add(s.ToIPAddressRange())
+	}
+	def.Specifics = make([]Specific, 0)
+	def.IncludeRanges = make([]IncludeRange, 0)
+	for _, r := range rangeSet.Get() {
+		if r.IsSingleton() {
+			def.Specifics = append(def.Specifics, Specific{
+				Location:      r.Location,
+				Retries:       r.Retries,
+				Timeout:       r.Timeout,
+				ForeignSource: r.ForeignSource,
+				Content:       r.Begin.String(),
+			})
+		} else {
+			def.IncludeRanges = append(def.IncludeRanges, IncludeRange{
+				Location:      r.Location,
+				Retries:       r.Retries,
+				Timeout:       r.Timeout,
+				ForeignSource: r.ForeignSource,
+				Begin:         r.Begin.String(),
+				End:           r.End.String(),
+			})
+		}
+	}
+}
+
 // GetTotalEstimatedAddresses offers an estimate about the potential total number of IP addresses to consider for discovery.
 // It ignores the external files.
 func (def *Definition) GetTotalEstimatedAddresses() uint32 {
@@ -201,12 +260,12 @@ func (def *Definition) String() string {
 }
 
 func (def *Definition) getRange(cidr string) (net.IP, net.IP, error) {
-	_, ipv4Net, err := net.ParseCIDR(cidr)
+	_, ipNet, err := net.ParseCIDR(cidr)
 	if err != nil {
 		return nil, nil, err
 	}
-	mask := binary.BigEndian.Uint32(ipv4Net.Mask)
-	start := binary.BigEndian.Uint32(ipv4Net.IP)
+	mask := binary.BigEndian.Uint32(ipNet.Mask)
+	start := binary.BigEndian.Uint32(ipNet.IP)
 	finish := (start & mask) | (mask ^ 0xffffffff)
 	return def.intToIp(start + 1), def.intToIp(finish - 1), nil
 }
@@ -258,6 +317,13 @@ func (cfg *DiscoveryConfiguration) Sort() {
 	}
 }
 
+func (cfg *DiscoveryConfiguration) Merge() {
+	for i := range cfg.Definitions {
+		d := &cfg.Definitions[i]
+		d.Merge()
+	}
+}
+
 func (cfg *DiscoveryConfiguration) GetTotalEstimatedAddresses() uint32 {
 	var total uint32 = 0
 	for _, d := range cfg.Definitions {
@@ -278,7 +344,7 @@ func (cfg *DiscoveryConfiguration) UpdateOpenNMS(onmsHomePath string, onmsPort i
 		return fmt.Errorf("cannot read discovery configuration: %v", err)
 	}
 	if cfg.String() == current.String() {
-		return fmt.Errorf("there are no differences between the generated and the current configuration; no changes applied.")
+		return fmt.Errorf("there are no differences between the generated and the current configuration; no changes applied")
 	}
 	if err := os.WriteFile(dest, []byte(cfg.String()), 0644); err != nil {
 		return fmt.Errorf("cannot write discovery configuration: %v", err)

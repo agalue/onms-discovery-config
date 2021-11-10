@@ -104,15 +104,7 @@ func main() {
 
 	flag.Parse()
 
-	if includeCIDR != "" {
-		log.Printf("processing Include CIDR %s", includeCIDR)
-		s := getScanner(includeCIDR)
-		for s.Scan() {
-			cidr := strings.TrimSpace(s.Text())
-			log.Printf("including CIDR %s", cidr)
-			def.IncludeCIDR(cidr)
-		}
-	}
+	// Adding exclusions first to populate the local maps to optimize the inclusion of specifics
 
 	if excludeCIDR != "" {
 		log.Printf("processing Exclude CIDR %s", excludeCIDR)
@@ -135,6 +127,18 @@ func main() {
 				log.Printf("excluding IP %s", s.Text())
 				addressBlackList[s.Text()] = true
 			}
+		}
+	}
+
+	// Processing sources for IP inclusion
+
+	if includeCIDR != "" {
+		log.Printf("processing Include CIDR %s", includeCIDR)
+		s := getScanner(includeCIDR)
+		for s.Scan() {
+			cidr := strings.TrimSpace(s.Text())
+			log.Printf("including CIDR %s", cidr)
+			def.IncludeCIDR(cidr)
 		}
 	}
 
@@ -176,7 +180,12 @@ func main() {
 		cmd.Wait()
 	}
 
-	baseConfig.Sort()
+	// Sort and optimize configuration by combining subsets of specifics into ranges when applicable
+
+	baseConfig.Merge()
+
+	// Conditionally update OpenNMS (if necessary)
+
 	log.Printf("generated configuration:\n%s", baseConfig.String())
 	log.Printf("the estimated number of IP addresses to check is about %d", baseConfig.GetTotalEstimatedAddresses())
 	if !dryRun {
