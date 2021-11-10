@@ -11,6 +11,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"sort"
@@ -270,9 +271,17 @@ func (cfg *DiscoveryConfiguration) UpdateOpenNMS(onmsHomePath string, onmsPort i
 	if _, err := os.Stat(dest); errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("discovery configuration file not found at %s", dest)
 	}
-	data, _ := xml.MarshalIndent(cfg, "", "   ")
-	if err := os.WriteFile(dest, data, 0644); err != nil {
-		return err
+	current := new(DiscoveryConfiguration)
+	if current_bytes, err := ioutil.ReadFile(dest); err == nil {
+		xml.Unmarshal(current_bytes, current)
+	} else {
+		return fmt.Errorf("cannot read discovery configuration: %v", err)
+	}
+	if cfg.String() == current.String() {
+		return fmt.Errorf("there are no differences between the generated and the current configuration; no changes applied.")
+	}
+	if err := os.WriteFile(dest, []byte(cfg.String()), 0644); err != nil {
+		return fmt.Errorf("cannot write discovery configuration: %v", err)
 	}
 	hostname, _ := os.Hostname()
 	event := Event{
