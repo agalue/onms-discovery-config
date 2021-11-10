@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"math/big"
 	"net"
 )
@@ -17,6 +18,9 @@ func (r *IPAddressRangeSet) Add(ipr IPAddressRange) {
 	for i, n := range r.ipRanges {
 		if ipr.ComesBefore(n) && !ipr.AdjacentJoins(n) {
 			idx := i - 1
+			if idx < 0 {
+				idx = 0
+			}
 			r.ipRanges = append(r.ipRanges[:idx+1], r.ipRanges[idx:]...)
 			r.ipRanges[idx] = ipr
 			return
@@ -104,6 +108,10 @@ func (r *IPAddressRange) IsSingleton() bool {
 
 func (r *IPAddressRange) Equal(ipr IPAddressRange) bool {
 	return r.Begin.Equal(ipr.Begin) && r.End.Equal(ipr.End)
+}
+
+func (r *IPAddressRange) String() string {
+	return fmt.Sprintf("%s -> %s", r.Begin, r.End)
 }
 
 func (r *IPAddressRange) comesImmediatelyAfter(ipr IPAddressRange) bool {

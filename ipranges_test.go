@@ -76,15 +76,23 @@ func TestIPAddressRangeSet(t *testing.T) {
 	r.Add(IPAddressRange{Begin: net.ParseIP("192.168.0.5"), End: net.ParseIP("192.168.0.5")})
 	// Add specific from second range
 	r.Add(IPAddressRange{Begin: net.ParseIP("192.168.10.5"), End: net.ParseIP("192.168.10.5")})
-	// We should get two ranges
+	// Add multiple specifcs from another range
+	r.Add(IPAddressRange{Begin: net.ParseIP("172.16.0.11"), End: net.ParseIP("172.16.0.11")})
+	r.Add(IPAddressRange{Begin: net.ParseIP("172.16.0.12"), End: net.ParseIP("172.16.0.12")})
+	r.Add(IPAddressRange{Begin: net.ParseIP("172.16.0.13"), End: net.ParseIP("172.16.0.13")})
+	r.Add(IPAddressRange{Begin: net.ParseIP("172.16.0.14"), End: net.ParseIP("172.16.0.14")})
+	// We should get 3 ranges
 	ranges := r.Get()
-	if len(ranges) != 2 {
+	if len(ranges) != 3 {
 		t.Errorf("we got an invalid number of ranges: %v", ranges)
 	}
-	if !ranges[0].Equal(IPAddressRange{Begin: net.ParseIP("192.168.0.1"), End: net.ParseIP("192.168.0.10")}) {
-		t.Errorf("invaid first range: %v", ranges[0])
+	if !ranges[0].Equal(IPAddressRange{Begin: net.ParseIP("172.16.0.11"), End: net.ParseIP("172.16.0.14")}) {
+		t.Errorf("invaid first range: %s", ranges[0].String())
 	}
-	if !ranges[1].Equal(IPAddressRange{Begin: net.ParseIP("192.168.10.1"), End: net.ParseIP("192.168.10.25")}) {
-		t.Errorf("invaid first range: %v", ranges[1])
+	if !ranges[1].Equal(IPAddressRange{Begin: net.ParseIP("192.168.0.1"), End: net.ParseIP("192.168.0.10")}) {
+		t.Errorf("invaid second range: %s", ranges[1].String())
+	}
+	if !ranges[2].Equal(IPAddressRange{Begin: net.ParseIP("192.168.10.1"), End: net.ParseIP("192.168.10.25")}) {
+		t.Errorf("invaid third range: %s", ranges[2].String())
 	}
 }
