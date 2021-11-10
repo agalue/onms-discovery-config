@@ -86,10 +86,10 @@ func TestIncludeCIDR(t *testing.T) {
 	if len(def.IncludeRanges) != 1 {
 		t.Errorf("the definition should have one include-range")
 	}
-	if def.IncludeRanges[0].Begin != "192.168.0.1" {
+	if def.IncludeRanges[0].Begin.String() != "192.168.0.1" {
 		t.Errorf("the include range has a wrong begin address: %s", def.IncludeRanges[0].Begin)
 	}
-	if def.IncludeRanges[0].End != "192.168.0.254" {
+	if def.IncludeRanges[0].End.String() != "192.168.0.254" {
 		t.Errorf("the include range has a wrong end address")
 	}
 }
@@ -113,13 +113,13 @@ func TestExcludeRangesContainInt(t *testing.T) {
 	def := new(Definition)
 	def.ExcludeCIDR("192.168.0.0/24")
 	def.ExcludeCIDR("192.168.1.0/24")
-	if def.excludeRangesContain(def.ipToInt("192.168.0.1")) == false {
+	if def.excludeRangesContain(def.ipToInt(net.ParseIP("192.168.0.1"))) == false {
 		t.Errorf("address 192.168.0.1 should be in one of the excluded ranges")
 	}
-	if def.excludeRangesContain(def.ipToInt("192.168.1.10")) == false {
+	if def.excludeRangesContain(def.ipToInt(net.ParseIP("192.168.1.10"))) == false {
 		t.Errorf("address 192.168.1.10 should be in one of the excluded ranges")
 	}
-	if def.excludeRangesContain(def.ipToInt("172.16.1.1")) == true {
+	if def.excludeRangesContain(def.ipToInt(net.ParseIP("172.16.1.1"))) == true {
 		t.Errorf("address 172.16.1.1 should not be in any of the excluded ranges")
 	}
 }
@@ -201,11 +201,11 @@ func TestSort(t *testing.T) {
 	d.AddSpecific("172.16.20.2")
 	d.AddSpecific("172.16.16.2")
 	d.Sort()
-	if d.Specifics[0].Content != "172.16.16.2" {
-		t.Errorf("invalid sort for position 0: %s", d.Specifics[0].Content)
+	if d.Specifics[0].IP.String() != "172.16.16.2" {
+		t.Errorf("invalid sort for position 0: %s", d.Specifics[0].IP.String())
 	}
-	if d.Specifics[3].Content != "192.168.0.10" {
-		t.Errorf("invalid sort for position 3: %s", d.Specifics[3].Content)
+	if d.Specifics[3].IP.String() != "192.168.0.10" {
+		t.Errorf("invalid sort for position 3: %s", d.Specifics[3].IP.String())
 	}
 }
 

@@ -33,7 +33,7 @@ type Detector struct {
 
 type Specific struct {
 	XMLName       xml.Name `xml:"specific"`
-	Content       string   `xml:",chardata"`
+	IP            net.IP   `xml:",chardata"`
 	Location      string   `xml:"location,attr,omitempty"`
 	Retries       int      `xml:"retries,attr,omitempty"`
 	Timeout       int      `xml:"timeout,attr,omitempty"`
@@ -46,8 +46,8 @@ func (s *Specific) ToIPAddressRange() IPAddressRange {
 		Retries:       s.Retries,
 		Timeout:       s.Timeout,
 		ForeignSource: s.ForeignSource,
-		Begin:         net.ParseIP(s.Content),
-		End:           net.ParseIP(s.Content),
+		Begin:         s.IP,
+		End:           s.IP,
 	}
 }
 
@@ -57,8 +57,8 @@ type IncludeRange struct {
 	Retries       int      `xml:"retries,attr,omitempty"`
 	Timeout       int      `xml:"timeout,attr,omitempty"`
 	ForeignSource string   `xml:"foreign-source,attr,omitempty"`
-	Begin         string   `xml:"begin"`
-	End           string   `xml:"end"`
+	Begin         net.IP   `xml:"begin"`
+	End           net.IP   `xml:"end"`
 }
 
 func (r *IncludeRange) ToIPAddressRange() IPAddressRange {
@@ -67,16 +67,16 @@ func (r *IncludeRange) ToIPAddressRange() IPAddressRange {
 		Retries:       r.Retries,
 		Timeout:       r.Timeout,
 		ForeignSource: r.ForeignSource,
-		Begin:         net.ParseIP(r.Begin),
-		End:           net.ParseIP(r.End),
+		Begin:         r.Begin,
+		End:           r.End,
 	}
 }
 
 type ExcludeRange struct {
 	XMLName  xml.Name `xml:"exclude-range"`
 	Location string   `xml:"location,attr,omitempty"`
-	Begin    string   `xml:"begin"`
-	End      string   `xml:"end"`
+	Begin    net.IP   `xml:"begin"`
+	End      net.IP   `xml:"end"`
 }
 
 type IncludeURL struct {
@@ -103,12 +103,11 @@ type Definition struct {
 }
 
 func (def *Definition) AddSpecific(specific string) {
-	if net.ParseIP(specific) == nil {
+	if ip := net.ParseIP(specific); ip == nil {
 		return
+	} else {
+		def.Specifics = append(def.Specifics, Specific{IP: ip})
 	}
-	def.Specifics = append(def.Specifics, Specific{
-		Content: specific,
-	})
 }
 
 func (def *Definition) AddIncludeURL(url string) {
@@ -118,25 +117,29 @@ func (def *Definition) AddIncludeURL(url string) {
 }
 
 func (def *Definition) AddIncludeRange(begin, end string) {
-	if net.ParseIP(begin) == nil || net.ParseIP(end) == nil {
+	beginIP := net.ParseIP(begin)
+	endIP := net.ParseIP(end)
+	if beginIP == nil || endIP == nil {
 		return
 	}
-	if def.ipToInt(end) > def.ipToInt(begin) {
+	if def.ipToInt(endIP) > def.ipToInt(beginIP) {
 		def.IncludeRanges = append(def.IncludeRanges, IncludeRange{
-			Begin: begin,
-			End:   end,
+			Begin: beginIP,
+			End:   endIP,
 		})
 	}
 }
 
 func (def *Definition) AddExcludeRange(begin, end string) {
-	if net.ParseIP(begin) == nil || net.ParseIP(end) == nil {
+	beginIP := net.ParseIP(begin)
+	endIP := net.ParseIP(end)
+	if beginIP == nil || endIP == nil {
 		return
 	}
-	if def.ipToInt(end) > def.ipToInt(begin) {
+	if def.ipToInt(endIP) > def.ipToInt(beginIP) {
 		def.ExcludeRanges = append(def.ExcludeRanges, ExcludeRange{
-			Begin: begin,
-			End:   end,
+			Begin: beginIP,
+			End:   endIP,
 		})
 	}
 }
@@ -159,7 +162,7 @@ func (def *Definition) IncludeRangesContain(ipaddr string) bool {
 		return false
 	}
 	for _, r := range def.IncludeRanges {
-		if bytes.Compare(ip, net.ParseIP(r.Begin)) >= 0 && bytes.Compare(ip, net.ParseIP(r.End)) <= 0 {
+		if bytes.Compare(ip, r.Begin) >= 0 && bytes.Compare(ip, r.End) <= 0 {
 			return true
 		}
 	}
@@ -172,7 +175,7 @@ func (def *Definition) ExcludeRangesContain(ipaddr string) bool {
 		return false
 	}
 	for _, r := range def.ExcludeRanges {
-		if bytes.Compare(ip, net.ParseIP(r.Begin)) >= 0 && bytes.Compare(ip, net.ParseIP(r.End)) <= 0 {
+		if bytes.Compare(ip, r.Begin) >= 0 && bytes.Compare(ip, r.End) <= 0 {
 			return true
 		}
 	}
@@ -181,8 +184,8 @@ func (def *Definition) ExcludeRangesContain(ipaddr string) bool {
 
 func (def *Definition) Sort() {
 	sort.SliceStable(def.Specifics, func(i, j int) bool {
-		a := def.ipToInt(def.Specifics[i].Content)
-		b := def.ipToInt(def.Specifics[j].Content)
+		a := def.ipToInt(def.Specifics[i].IP)
+		b := def.ipToInt(def.Specifics[j].IP)
 		return a < b
 	})
 
@@ -217,7 +220,7 @@ func (def *Definition) Merge() {
 				Retries:       r.Retries,
 				Timeout:       r.Timeout,
 				ForeignSource: r.ForeignSource,
-				Content:       r.Begin.String(),
+				IP:            r.Begin,
 			})
 		} else {
 			def.IncludeRanges = append(def.IncludeRanges, IncludeRange{
@@ -225,8 +228,8 @@ func (def *Definition) Merge() {
 				Retries:       r.Retries,
 				Timeout:       r.Timeout,
 				ForeignSource: r.ForeignSource,
-				Begin:         r.Begin.String(),
-				End:           r.End.String(),
+				Begin:         r.Begin,
+				End:           r.End,
 			})
 		}
 	}
@@ -246,7 +249,7 @@ func (def *Definition) GetTotalEstimatedAddresses() uint32 {
 		}
 	}
 	for _, ip := range def.Specifics {
-		i := def.ipToInt(ip.Content)
+		i := def.ipToInt(ip.IP)
 		if !def.excludeRangesContain(i) {
 			total++
 		}
@@ -271,8 +274,7 @@ func (def *Definition) getRange(cidr string) (net.IP, net.IP, error) {
 }
 
 // Convert an IPv4 address to integer
-func (def *Definition) ipToInt(ipaddr string) uint32 {
-	ip := net.ParseIP(ipaddr)
+func (def *Definition) ipToInt(ip net.IP) uint32 {
 	if ip == nil {
 		return 0
 	}
