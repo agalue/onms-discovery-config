@@ -237,6 +237,66 @@ func TestSort(t *testing.T) {
 	}
 }
 
+func TestMerge(t *testing.T) {
+	d := Definition{}
+	d.IncludeCIDR("192.168.0.0/24")
+	d.IncludeCIDR("172.16.0.0/16")
+	d.IncludeCIDR("10.0.0.0/8")
+	d.ExcludeCIDR("10.0.1.0/24")
+	d.AddIncludeRange("192.168.0.1", "192.168.2.254") // Overlaps CIDR #1
+	d.AddExcludeRange("10.0.1.10", "10.0.2.254")      // Overlaps CIDR #4
+	d.AddSpecific("192.168.0.10")                     // Part of CIDR #1
+	// The following 5 must be collapsed
+	d.AddSpecific("200.10.0.15")
+	d.AddSpecific("200.10.0.16")
+	d.AddSpecific("200.10.0.17")
+	d.AddSpecific("200.10.0.18")
+	d.AddSpecific("200.10.0.19")
+	d.AddSpecific("200.10.0.20")
+	// The following 4 must be collapsed
+	d.AddSpecific("200.10.0.25")
+	d.AddSpecific("200.10.0.26")
+	d.AddSpecific("200.10.0.27")
+	d.AddSpecific("200.10.0.28")
+	// A few disperse specifics
+	d.AddSpecific("30.0.0.2")
+	d.AddSpecific("40.0.0.2")
+	d.AddSpecific("50.0.0.2")
+	// Verify configuration
+	cfg := &DiscoveryConfiguration{
+		PacketsPerSecond: 10,
+		InitialSleepTime: 300000,
+		RestartSleepTime: 86400000,
+		Retries:          1,
+		Timeout:          2000,
+		Definitions:      []Definition{d},
+	}
+	cfg.Merge()
+	fmt.Println(cfg.String())
+	out := cfg.Definitions[0]
+	if len(out.Specifics) != 3 {
+		t.Errorf("incorrect number of specifics: %d", len(out.Specifics))
+	}
+	if len(out.IncludeRanges) != 5 {
+		t.Errorf("incorrect number of include-ranges: %d", len(out.IncludeRanges))
+	}
+	if len(out.ExcludeRanges) != 1 {
+		t.Errorf("incorrect number of exclude-ranges: %d", len(out.ExcludeRanges))
+	}
+	r := out.IncludeRanges[2]
+	if r.Begin.String() != "192.168.0.1" || r.End.String() != "192.168.2.254" {
+		t.Errorf("incorrect merged range: %v", r)
+	}
+	r = out.IncludeRanges[3]
+	if r.Begin.String() != "200.10.0.15" || r.End.String() != "200.10.0.20" {
+		t.Errorf("incorrect merged range: %v", r)
+	}
+	e := out.ExcludeRanges[0]
+	if e.Begin.String() != "10.0.1.1" || e.End.String() != "10.0.2.254" {
+		t.Errorf("incorrect merged range: %v", e)
+	}
+}
+
 func TestUpateOpenNMS(t *testing.T) {
 	dir, err := ioutil.TempDir(os.TempDir(), "_discovery")
 	if err != nil {

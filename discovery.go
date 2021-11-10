@@ -77,6 +77,14 @@ type ExcludeRange struct {
 	End      net.IP   `xml:"end"`
 }
 
+func (r *ExcludeRange) ToIPAddressRange() IPAddressRange {
+	return IPAddressRange{
+		Location: r.Location,
+		Begin:    r.Begin,
+		End:      r.End,
+	}
+}
+
 type IncludeURL struct {
 	XMLName       xml.Name `xml:"include-url"`
 	Content       string   `xml:",chardata"`
@@ -231,6 +239,20 @@ func (def *Definition) Merge() {
 			})
 		}
 	}
+
+	excludeSet := new(IPAddressRangeSet)
+	for _, r := range def.ExcludeRanges {
+		excludeSet.Add(r.ToIPAddressRange())
+	}
+	def.ExcludeRanges = make([]ExcludeRange, 0)
+	for _, r := range excludeSet.Get() {
+		def.ExcludeRanges = append(def.ExcludeRanges, ExcludeRange{
+			Location: r.Location,
+			Begin:    r.Begin,
+			End:      r.End,
+		})
+	}
+
 }
 
 // GetTotalEstimatedAddresses offers an estimate about the potential total number of IP addresses to consider for discovery.
