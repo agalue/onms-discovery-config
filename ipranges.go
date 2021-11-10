@@ -1,12 +1,11 @@
 // Code inspired by:
 // https://github.com/OpenNMS/opennms/blob/master/core/api/src/main/java/org/opennms/core/network/IPAddressRangeSet.java
 // https://github.com/OpenNMS/opennms/blob/master/core/api/src/main/java/org/opennms/core/network/IPAddressRange.java
-// Warning: Tested only with IPv4 addresses (IPv6 not supported)
 
 package main
 
 import (
-	"encoding/binary"
+	"math/big"
 	"net"
 )
 
@@ -43,28 +42,28 @@ type IPAddressRange struct {
 }
 
 func (r *IPAddressRange) Combine(ipr IPAddressRange) IPAddressRange {
-	src_a := binary.BigEndian.Uint32(r.Begin.To4())
-	src_b := binary.BigEndian.Uint32(r.End.To4())
-	dst_a := binary.BigEndian.Uint32(ipr.Begin.To4())
-	dst_b := binary.BigEndian.Uint32(ipr.End.To4())
+	src_a := IP2Int(r.Begin)
+	src_b := IP2Int(r.End)
+	dst_a := IP2Int(ipr.Begin)
+	dst_b := IP2Int(ipr.End)
 
 	minIP := r.Begin
-	if dst_a < src_a {
+	if dst_a.Cmp(src_a) < 0 {
 		minIP = ipr.Begin
 	}
 
 	maxIP := r.End
-	if dst_b > src_b {
+	if dst_b.Cmp(src_b) > 0 {
 		maxIP = ipr.End
 	}
 
 	return IPAddressRange{
 		Begin:         minIP,
 		End:           maxIP,
-		Location:      ipr.Location,
-		Timeout:       ipr.Timeout,
-		Retries:       ipr.Retries,
-		ForeignSource: ipr.ForeignSource,
+		Location:      r.Location,
+		Timeout:       r.Timeout,
+		Retries:       r.Retries,
+		ForeignSource: r.ForeignSource,
 	}
 }
 
@@ -73,10 +72,10 @@ func (r *IPAddressRange) Combinable(ipr IPAddressRange) bool {
 }
 
 func (r *IPAddressRange) Contains(ip net.IP) bool {
-	an := binary.BigEndian.Uint32(r.Begin.To4())
-	bn := binary.BigEndian.Uint32(r.End.To4())
-	n := binary.BigEndian.Uint32(ip.To4())
-	return n >= an && n <= bn
+	an := IP2Int(r.Begin)
+	bn := IP2Int(r.End)
+	n := IP2Int(ip)
+	return n.Cmp(an) >= 0 && n.Cmp(bn) <= 0
 }
 
 func (r *IPAddressRange) Overlaps(ipr IPAddressRange) bool {
@@ -84,15 +83,15 @@ func (r *IPAddressRange) Overlaps(ipr IPAddressRange) bool {
 }
 
 func (r *IPAddressRange) ComesBefore(ipr IPAddressRange) bool {
-	an := binary.BigEndian.Uint32(r.End.To4())
-	bn := binary.BigEndian.Uint32(ipr.Begin.To4())
-	return an < bn
+	an := IP2Int(r.End)
+	bn := IP2Int(ipr.Begin)
+	return an.Cmp(bn) < 0
 }
 
 func (r *IPAddressRange) ComesAfter(ipr IPAddressRange) bool {
-	an := binary.BigEndian.Uint32(r.Begin.To4())
-	bn := binary.BigEndian.Uint32(ipr.End.To4())
-	return an > bn
+	an := IP2Int(r.Begin)
+	bn := IP2Int(ipr.End)
+	return an.Cmp(bn) > 0
 }
 
 func (r *IPAddressRange) AdjacentJoins(ipr IPAddressRange) bool {
@@ -116,13 +115,13 @@ func (r *IPAddressRange) comesImmediatelyBefore(ipr IPAddressRange) bool {
 }
 
 func (r *IPAddressRange) isSuccessorOf(a, b net.IP) bool {
-	an := binary.BigEndian.Uint32(a.To4())
-	bn := binary.BigEndian.Uint32(b.To4())
-	return an == bn+1
+	an := IP2Int(a)
+	bn := IP2Int(b)
+	return an.Cmp(bn.Add(bn, big.NewInt(1))) == 0
 }
 
 func (r *IPAddressRange) isPredecessorOf(a, b net.IP) bool {
-	an := binary.BigEndian.Uint32(a.To4())
-	bn := binary.BigEndian.Uint32(b.To4())
-	return an == bn-1
+	an := IP2Int(a)
+	bn := IP2Int(b)
+	return an.Cmp(bn.Sub(bn, big.NewInt(1))) == 0
 }

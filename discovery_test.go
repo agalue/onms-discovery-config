@@ -80,6 +80,34 @@ func TestParseDiscoveryConfiguration(t *testing.T) {
 	}
 }
 
+func TestGetIPv4Range(t *testing.T) {
+	def := new(Definition)
+	src, dst, err := def.getRange("172.16.0.0/24")
+	if err != nil {
+		t.Errorf("cannot get range: %v", err)
+	}
+	if src.String() != "172.16.0.1" {
+		t.Errorf("invalid source address")
+	}
+	if dst.String() != "172.16.0.254" {
+		t.Errorf("invalid dst address")
+	}
+}
+
+func TestGetIPv6Range(t *testing.T) {
+	def := new(Definition)
+	src, dst, err := def.getRange("2001::0/64")
+	if err != nil {
+		t.Errorf("cannot get range: %v", err)
+	}
+	if src.String() != "2001::1" {
+		t.Errorf("invalid source address")
+	}
+	if dst.String() != "2001::ffff:ffff:ffff:fffe" {
+		t.Errorf("invalid dst address")
+	}
+}
+
 func TestIncludeCIDR(t *testing.T) {
 	def := new(Definition)
 	def.IncludeCIDR("192.168.0.0/24")
@@ -113,13 +141,13 @@ func TestExcludeRangesContainInt(t *testing.T) {
 	def := new(Definition)
 	def.ExcludeCIDR("192.168.0.0/24")
 	def.ExcludeCIDR("192.168.1.0/24")
-	if def.excludeRangesContain(def.ipToInt(net.ParseIP("192.168.0.1"))) == false {
+	if def.excludeRangesContain(IP2Int(net.ParseIP("192.168.0.1"))) == false {
 		t.Errorf("address 192.168.0.1 should be in one of the excluded ranges")
 	}
-	if def.excludeRangesContain(def.ipToInt(net.ParseIP("192.168.1.10"))) == false {
+	if def.excludeRangesContain(IP2Int(net.ParseIP("192.168.1.10"))) == false {
 		t.Errorf("address 192.168.1.10 should be in one of the excluded ranges")
 	}
-	if def.excludeRangesContain(def.ipToInt(net.ParseIP("172.16.1.1"))) == true {
+	if def.excludeRangesContain(IP2Int(net.ParseIP("172.16.1.1"))) == true {
 		t.Errorf("address 172.16.1.1 should not be in any of the excluded ranges")
 	}
 }

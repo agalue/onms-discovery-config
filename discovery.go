@@ -1,17 +1,15 @@
 // Representation and helper functions for discovery-configuration.xml
 // https://github.com/OpenNMS/opennms/blob/master/opennms-config-model/src/main/resources/xsds/discovery-configuration.xsd
-//
-// Warning: Tested only with IPv4 addresses (IPv6 not supported)
 
 package main
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/xml"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net"
 	"os"
 	"sort"
@@ -122,7 +120,7 @@ func (def *Definition) AddIncludeRange(begin, end string) {
 	if beginIP == nil || endIP == nil {
 		return
 	}
-	if def.ipToInt(endIP) > def.ipToInt(beginIP) {
+	if IP2Int(endIP).Cmp(IP2Int(beginIP)) >= 0 {
 		def.IncludeRanges = append(def.IncludeRanges, IncludeRange{
 			Begin: beginIP,
 			End:   endIP,
@@ -136,7 +134,7 @@ func (def *Definition) AddExcludeRange(begin, end string) {
 	if beginIP == nil || endIP == nil {
 		return
 	}
-	if def.ipToInt(endIP) > def.ipToInt(beginIP) {
+	if IP2Int(endIP).Cmp(IP2Int(beginIP)) >= 0 {
 		def.ExcludeRanges = append(def.ExcludeRanges, ExcludeRange{
 			Begin: beginIP,
 			End:   endIP,
@@ -184,21 +182,21 @@ func (def *Definition) ExcludeRangesContain(ipaddr string) bool {
 
 func (def *Definition) Sort() {
 	sort.SliceStable(def.Specifics, func(i, j int) bool {
-		a := def.ipToInt(def.Specifics[i].IP)
-		b := def.ipToInt(def.Specifics[j].IP)
-		return a < b
+		a := IP2Int(def.Specifics[i].IP)
+		b := IP2Int(def.Specifics[j].IP)
+		return a.Cmp(b) < 0
 	})
 
 	sort.SliceStable(def.IncludeRanges, func(i, j int) bool {
-		a := def.ipToInt(def.IncludeRanges[i].Begin)
-		b := def.ipToInt(def.IncludeRanges[j].End)
-		return a < b
+		a := IP2Int(def.IncludeRanges[i].Begin)
+		b := IP2Int(def.IncludeRanges[j].End)
+		return a.Cmp(b) < 0
 	})
 
 	sort.SliceStable(def.ExcludeRanges, func(i, j int) bool {
-		a := def.ipToInt(def.ExcludeRanges[i].Begin)
-		b := def.ipToInt(def.ExcludeRanges[j].End)
-		return a < b
+		a := IP2Int(def.ExcludeRanges[i].Begin)
+		b := IP2Int(def.ExcludeRanges[j].End)
+		return a.Cmp(b) < 0
 	})
 }
 
@@ -240,16 +238,16 @@ func (def *Definition) Merge() {
 func (def *Definition) GetTotalEstimatedAddresses() uint32 {
 	var total uint32 = 0
 	for _, r := range def.IncludeRanges {
-		a := def.ipToInt(r.Begin)
-		b := def.ipToInt(r.End)
-		for i := a; i <= b; i++ {
+		a := IP2Int(r.Begin)
+		b := IP2Int(r.End)
+		for i := a; i.Int64() <= b.Int64(); i.Add(i, big.NewInt(1)) {
 			if !def.excludeRangesContain(i) {
 				total++
 			}
 		}
 	}
 	for _, ip := range def.Specifics {
-		i := def.ipToInt(ip.IP)
+		i := IP2Int(ip.IP)
 		if !def.excludeRangesContain(i) {
 			total++
 		}
@@ -262,35 +260,30 @@ func (def *Definition) String() string {
 	return string(data)
 }
 
+// TODO: Verify functionality with IPv6
 func (def *Definition) getRange(cidr string) (net.IP, net.IP, error) {
-	_, ipNet, err := net.ParseCIDR(cidr)
+	_, network, err := net.ParseCIDR(cidr)
 	if err != nil {
 		return nil, nil, err
 	}
-	mask := binary.BigEndian.Uint32(ipNet.Mask)
-	start := binary.BigEndian.Uint32(ipNet.IP)
-	finish := (start & mask) | (mask ^ 0xffffffff)
-	return def.intToIp(start + 1), def.intToIp(finish - 1), nil
+
+	firstIP := network.IP
+	prefixLen, bits := network.Mask.Size()
+	firstIPInt := IP2Int(firstIP)
+	hostLen := uint(bits) - uint(prefixLen)
+	lastIPInt := big.NewInt(1)
+	lastIPInt.Lsh(lastIPInt, hostLen)
+	lastIPInt.Sub(lastIPInt, big.NewInt(1))
+	lastIPInt.Or(lastIPInt, firstIPInt)
+	lastIP := Int2IP(lastIPInt)
+	firstIP[len(firstIP)-1]++
+	lastIP[len(lastIP)-1]--
+	return firstIP, lastIP, nil
 }
 
-// Convert an IPv4 address to integer
-func (def *Definition) ipToInt(ip net.IP) uint32 {
-	if ip == nil {
-		return 0
-	}
-	return binary.BigEndian.Uint32(ip.To4())
-}
-
-// Convert an integer to IPv4 address
-func (def *Definition) intToIp(ipaddr uint32) net.IP {
-	ip := make(net.IP, 4)
-	binary.BigEndian.PutUint32(ip, ipaddr)
-	return ip
-}
-
-func (def *Definition) excludeRangesContain(ipaddr uint32) bool {
+func (def *Definition) excludeRangesContain(ipaddr *big.Int) bool {
 	for _, r := range def.ExcludeRanges {
-		if ipaddr >= def.ipToInt(r.Begin) && ipaddr <= def.ipToInt(r.End) {
+		if ipaddr.Cmp(IP2Int(r.Begin)) >= 0 && ipaddr.Cmp(IP2Int(r.End)) <= 0 {
 			return true
 		}
 	}

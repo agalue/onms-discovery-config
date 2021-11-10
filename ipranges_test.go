@@ -5,31 +5,6 @@ import (
 	"testing"
 )
 
-func TestIPAddressRangeSet(t *testing.T) {
-	r := new(IPAddressRangeSet)
-	// Add first range
-	r.Add(IPAddressRange{Begin: net.ParseIP("192.168.0.1"), End: net.ParseIP("192.168.0.10")})
-	// Add non-overlapping second range
-	r.Add(IPAddressRange{Begin: net.ParseIP("192.168.10.1"), End: net.ParseIP("192.168.10.10")})
-	// Expand second range
-	r.Add(IPAddressRange{Begin: net.ParseIP("192.168.10.1"), End: net.ParseIP("192.168.10.25")})
-	// Add specific from first range
-	r.Add(IPAddressRange{Begin: net.ParseIP("192.168.0.5"), End: net.ParseIP("192.168.0.5")})
-	// Add specific from second range
-	r.Add(IPAddressRange{Begin: net.ParseIP("192.168.10.5"), End: net.ParseIP("192.168.10.5")})
-	// We should get two ranges
-	ranges := r.Get()
-	if len(ranges) != 2 {
-		t.Errorf("we got an invalid number of ranges: %v", ranges)
-	}
-	if !ranges[0].Equal(IPAddressRange{Begin: net.ParseIP("192.168.0.1"), End: net.ParseIP("192.168.0.10")}) {
-		t.Errorf("invaid first range: %v", ranges[0])
-	}
-	if !ranges[1].Equal(IPAddressRange{Begin: net.ParseIP("192.168.10.1"), End: net.ParseIP("192.168.10.25")}) {
-		t.Errorf("invaid first range: %v", ranges[1])
-	}
-}
-
 func TestContains(t *testing.T) {
 	r := IPAddressRange{Begin: net.ParseIP("192.168.0.1"), End: net.ParseIP("192.168.0.10")}
 	if !r.Contains(net.ParseIP("192.168.0.5")) {
@@ -64,6 +39,15 @@ func TestComesBefore(t *testing.T) {
 	}
 }
 
+func TestCombine(t *testing.T) {
+	a := IPAddressRange{Begin: net.ParseIP("192.168.1.10"), End: net.ParseIP("192.168.1.20")}
+	b := IPAddressRange{Begin: net.ParseIP("192.168.1.15"), End: net.ParseIP("192.168.1.25")}
+	c := a.Combine(b)
+	if c.Begin.String() != "192.168.1.10" || c.End.String() != "192.168.1.25" {
+		t.Errorf("Invalid range: %v", c)
+	}
+}
+
 func TestOverlaps(t *testing.T) {
 	a := IPAddressRange{Begin: net.ParseIP("192.168.1.10"), End: net.ParseIP("192.168.1.20")}
 	b := IPAddressRange{Begin: net.ParseIP("192.168.1.10"), End: net.ParseIP("192.168.1.10")}
@@ -77,5 +61,30 @@ func TestOverlaps(t *testing.T) {
 	}
 	if a.Overlaps(d) {
 		t.Errorf("range d should not overlaps a")
+	}
+}
+
+func TestIPAddressRangeSet(t *testing.T) {
+	r := new(IPAddressRangeSet)
+	// Add first range
+	r.Add(IPAddressRange{Begin: net.ParseIP("192.168.0.1"), End: net.ParseIP("192.168.0.10")})
+	// Add non-overlapping second range
+	r.Add(IPAddressRange{Begin: net.ParseIP("192.168.10.1"), End: net.ParseIP("192.168.10.10")})
+	// Expand second range
+	r.Add(IPAddressRange{Begin: net.ParseIP("192.168.10.1"), End: net.ParseIP("192.168.10.25")})
+	// Add specific from first range
+	r.Add(IPAddressRange{Begin: net.ParseIP("192.168.0.5"), End: net.ParseIP("192.168.0.5")})
+	// Add specific from second range
+	r.Add(IPAddressRange{Begin: net.ParseIP("192.168.10.5"), End: net.ParseIP("192.168.10.5")})
+	// We should get two ranges
+	ranges := r.Get()
+	if len(ranges) != 2 {
+		t.Errorf("we got an invalid number of ranges: %v", ranges)
+	}
+	if !ranges[0].Equal(IPAddressRange{Begin: net.ParseIP("192.168.0.1"), End: net.ParseIP("192.168.0.10")}) {
+		t.Errorf("invaid first range: %v", ranges[0])
+	}
+	if !ranges[1].Equal(IPAddressRange{Begin: net.ParseIP("192.168.10.1"), End: net.ParseIP("192.168.10.25")}) {
+		t.Errorf("invaid first range: %v", ranges[1])
 	}
 }
