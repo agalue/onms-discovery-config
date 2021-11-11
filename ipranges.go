@@ -1,3 +1,5 @@
+// Author: Alejandro galue <agalue@opennms.org>
+
 // Code inspired by:
 // https://github.com/OpenNMS/opennms/blob/master/core/api/src/main/java/org/opennms/core/network/IPAddressRangeSet.java
 // https://github.com/OpenNMS/opennms/blob/master/core/api/src/main/java/org/opennms/core/network/IPAddressRange.java

@@ -1,3 +1,5 @@
+// Author: Alejandro galue <agalue@opennms.org>
+
 package main
 
 import (
@@ -14,6 +16,7 @@ import (
 var addressWhiteList = make(map[string]bool) // Temporary map to avoid duplicates
 var addressBlackList = make(map[string]bool) // Temporary map to facilitate excluding addresses
 
+// Default configuration for Discoverd
 var baseConfig = &DiscoveryConfiguration{
 	InitialSleepTime: 30000,
 	RestartSleepTime: 86400000,
@@ -79,7 +82,7 @@ func getScanner(fileName string) *bufio.Scanner {
 
 func main() {
 	log.SetOutput(os.Stdout)
-	def := &baseConfig.Definitions[0] // Keep a reference to the main definition
+	def := &baseConfig.Definitions[0] // Keep a reference against the main and only discovery definition object
 
 	var dryRun bool
 	var onmsPort int

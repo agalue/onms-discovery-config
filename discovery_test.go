@@ -1,3 +1,5 @@
+// Author: Alejandro galue <agalue@opennms.org>
+
 package main
 
 import (

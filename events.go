@@ -1,4 +1,7 @@
-// Representation and helper functions for an events log
+// Author: Alejandro galue <agalue@opennms.org>
+
+// Representation and helper functions for an events log object
+// https://github.com/OpenNMS/opennms/blob/master/features/events/api/src/main/java/org/opennms/netmgt/xml/event/Log.java
 // https://github.com/OpenNMS/opennms/blob/master/opennms-base-assembly/src/main/filtered/bin/send-event.pl
 
 package main

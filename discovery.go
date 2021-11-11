@@ -1,3 +1,5 @@
+// Author: Alejandro galue <agalue@opennms.org>
+
 // Representation and helper functions for discovery-configuration.xml
 // https://github.com/OpenNMS/opennms/blob/master/opennms-config-model/src/main/resources/xsds/discovery-configuration.xsd
 
@@ -282,7 +284,6 @@ func (def *Definition) String() string {
 	return string(data)
 }
 
-// TODO: Verify functionality with IPv6
 func (def *Definition) getRange(cidr string) (net.IP, net.IP, error) {
 	_, network, err := net.ParseCIDR(cidr)
 	if err != nil {
