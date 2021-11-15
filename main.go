@@ -84,7 +84,7 @@ func main() {
 	log.SetOutput(os.Stdout)
 	def := &baseConfig.Definitions[0] // Keep a reference against the main and only discovery definition object
 
-	var dryRun bool
+	var dryRun, optimize bool
 	var onmsPort int
 	var onmsHome, includeCIDR, excludeCIDR, includeList, excludeList, includeDNS, includeNNMiHex string
 
@@ -104,6 +104,7 @@ func main() {
 	flag.IntVar(&baseConfig.PacketsPerSecond, "disc-packets-per-second", baseConfig.PacketsPerSecond, "Discoverd Packets Per Second (rate limit how many ICMP requests are going out)")
 
 	flag.BoolVar(&dryRun, "dry-run", false, "Whether or not to update OpenNMS configuration")
+	flag.BoolVar(&dryRun, "optimize", false, "Whether or not to optimize the configuration to reduce its size (this can be computationally expensive)")
 
 	flag.Parse()
 
@@ -185,7 +186,13 @@ func main() {
 
 	// Sort and optimize configuration by combining subsets of specifics into ranges when applicable
 
-	baseConfig.Merge()
+	if optimize {
+		log.Printf("optimizing configuration (this can take a while, be patient)...")
+		baseConfig.Merge()
+	} else {
+		log.Printf("sorting configuration...")
+		baseConfig.Sort()
+	}
 
 	// Conditionally update OpenNMS (if necessary)
 
