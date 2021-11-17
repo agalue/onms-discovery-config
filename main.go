@@ -104,7 +104,7 @@ func main() {
 	flag.IntVar(&baseConfig.PacketsPerSecond, "disc-packets-per-second", baseConfig.PacketsPerSecond, "Discoverd Packets Per Second (rate limit how many ICMP requests are going out)")
 
 	flag.BoolVar(&dryRun, "dry-run", false, "Whether or not to update OpenNMS configuration")
-	flag.BoolVar(&dryRun, "optimize", false, "Whether or not to optimize the configuration to reduce its size (this can be computationally expensive)")
+	flag.BoolVar(&optimize, "optimize", false, "Whether or not to optimize the configuration to reduce its size (this can be computationally expensive)")
 
 	flag.Parse()
 
